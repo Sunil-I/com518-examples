@@ -19,8 +19,8 @@ app.get("/time", (req, res) => {
   res.send(`This request took ${new Date().getMilliseconds()} ms.`);
 });
 
-app.get("/songs", (req, res) => {
-  con.query(`SELECT * FROM songs`, (error, results, fields) => {
+app.get("/products", (req, res) => {
+  con.query(`SELECT * FROM wadsongs`, (error, results, fields) => {
     if (error) {
       res.status(500).json({ error: error });
     } else {
@@ -29,9 +29,9 @@ app.get("/songs", (req, res) => {
   });
 });
 
-app.get("/songs/id/:song_id", (req, res) => {
+app.get("/products/id/:song_id", (req, res) => {
   con.query(
-    `SELECT * FROM songs WHERE id = ?`,
+    `SELECT * FROM wadsongs WHERE id = ?`,
     [req.params.song_id],
     (error, results, fields) => {
       if (error) {
@@ -43,9 +43,9 @@ app.get("/songs/id/:song_id", (req, res) => {
   );
 });
 
-app.get("/songs/name/:song_name", (req, res) => {
+app.get("/products/name/:", (req, res) => {
   con.query(
-    `SELECT * FROM songs WHERE title LIKE ?`,
+    `SELECT * FROM wadsongs WHERE title LIKE ?`,
     [req.params.song_name],
     (error, results, fields) => {
       if (error) {
@@ -57,9 +57,9 @@ app.get("/songs/name/:song_name", (req, res) => {
   );
 });
 
-app.get("/songs/:song_name/by/:artist_name", (req, res) => {
+app.get("/products/:song_name/by/:artist_name", (req, res) => {
   con.query(
-    `SELECT * FROM songs WHERE title LIKE ? AND artist LIKE ?`,
+    `SELECT * FROM wadsongs WHERE title LIKE ? AND artist LIKE ?`,
     [req.params.song_name, req.params.artist_name],
     (error, results, fields) => {
       if (error) {
@@ -71,9 +71,9 @@ app.get("/songs/:song_name/by/:artist_name", (req, res) => {
   );
 });
 
-app.get("/songs/by/:artist_name", (req, res) => {
+app.get("/products/by/:artist_name", (req, res) => {
   con.query(
-    `SELECT * FROM songs WHERE artist LIKE ?`,
+    `SELECT * FROM wadsongs WHERE artist LIKE ?`,
     [req.params.artist_name],
     (error, results, fields) => {
       if (error) {
@@ -85,7 +85,7 @@ app.get("/songs/by/:artist_name", (req, res) => {
   );
 });
 
-app.get("/songs/buy", async (req, res) => {
+app.get("/products/list", async (req, res) => {
   let { page } = req.query;
   // 10 results per page
   const perPage = 10;
@@ -93,18 +93,18 @@ app.get("/songs/buy", async (req, res) => {
   if (page) page = parseInt(page.toString().replace(/[^0-9]/g, ""));
   // checks for page num and how many results
   if (!page) page = 1;
-  // count how many songs we have in the database
-  con.query("SELECT COUNT(*) FROM songs", (errors, fields, rows) => {
+  // count how many products we have in the database
+  con.query("SELECT COUNT(*) FROM wadsongs", (errors, fields, rows) => {
     // calculate number of pages needed
     const count = Object.values(fields[0])[0];
     const numberOfPages = Math.ceil(count / perPage);
     con.query(
-      "SELECT * FROM songs LIMIT ? OFFSET ?",
+      "SELECT * FROM wadsongs LIMIT ? OFFSET ?",
       [perPage, perPage * page - perPage],
-      (error, songs, fields) => {
+      (error, products, fields) => {
         // render page
-        return res.render("songs", {
-          songs: songs,
+        return res.render("products", {
+          products: products,
           pages: numberOfPages,
           current: page,
           q: "",
@@ -114,17 +114,21 @@ app.get("/songs/buy", async (req, res) => {
   });
 });
 
-app.delete("/songs/delete/:song_id", (req, res) => {
+app.get("/products/advanced", (req, res) => {
+  res.sendFile(__dirname + "/public/advanced.html");
+});
+
+app.delete("/products/delete/:song_id", (req, res) => {
   const { song_id } = req.params;
   con.query(
-    "SELECT * FROM songs WHERE ID = ?",
+    "SELECT * FROM wadsongs WHERE ID = ?",
     [song_id],
     (error, results, fields) => {
       if (error) return res.status(500).send();
       if (!results.length) return res.status(404).send();
       const song = results[0];
       con.query(
-        "DELETE FROM songs WHERE ID = ?",
+        "DELETE FROM wadsongs WHERE ID = ?",
         [song.ID],
         (errors, results, fields) => {
           if (error) return res.status(500).send();
@@ -135,10 +139,10 @@ app.delete("/songs/delete/:song_id", (req, res) => {
   );
 });
 
-app.post("/songs/buy/:song_id", (req, res) => {
+app.post("/products/buy/:song_id", (req, res) => {
   const { song_id } = req.params;
   con.query(
-    "SELECT * FROM songs WHERE ID = ?",
+    "SELECT * FROM wadsongs WHERE ID = ?",
     [song_id],
     (error, results, fields) => {
       if (error)
@@ -157,7 +161,7 @@ app.post("/songs/buy/:song_id", (req, res) => {
           message: "Sorry we are out of stock for this item!",
         });
       con.query(
-        "UPDATE songs SET quantity=quantity-1 WHERE ID = ?",
+        "UPDATE products SET quantity=quantity-1 WHERE ID = ?",
         [song.ID],
         (errors, results, fields) => {
           if (error)
@@ -175,7 +179,7 @@ app.post("/songs/buy/:song_id", (req, res) => {
   );
 });
 
-app.post("/songs/create", (req, res) => {
+app.post("/products/create", (req, res) => {
   const {
     title,
     artist,
@@ -189,7 +193,7 @@ app.post("/songs/create", (req, res) => {
     quantity,
   } = req.body;
   con.query(
-    `INSERT INTO songs(title, artist, day, month, year, chart ,likes, downloads, review, quantity) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO products(title, artist, day, month, year, chart ,likes, downloads, review, quantity) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       title,
       artist,
